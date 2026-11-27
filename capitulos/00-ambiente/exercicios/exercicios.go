@@ -9,5 +9,5 @@ package exercicios
 //
 // TODO: troque a string vazia pela resposta certa e rode `make ex CAP=00`.
 func Saudacao() string {
-	return ""
+	return "Olá, Go!"
 }
