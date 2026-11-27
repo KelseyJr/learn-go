@@ -8,7 +8,7 @@ DIR := $(firstword $(wildcard capitulos/$(CAP)-*))
 GO  := docker compose run --rm go
 
 .DEFAULT_GOAL := help
-.PHONY: help list run ex test test-all fmt vet shell image check-cap
+.PHONY: help list run ex test test-all fmt vet shell image check-cap todo todo-test
 
 help: ## Mostra os comandos disponíveis
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | \
@@ -40,6 +40,12 @@ shell: ## Abre um terminal dentro do container Go
 
 image: ## (Re)constrói a imagem Docker
 	docker compose build
+
+todo: ## Sobe a API de tarefas em http://localhost:8080 (Ctrl+C para parar)
+	docker compose up --build todo-api
+
+todo-test: ## Roda os testes da API de tarefas
+	$(GO) go test -v ./projetos/todo-api/...
 
 check-cap:
 	@if [ -z "$(DIR)" ]; then \

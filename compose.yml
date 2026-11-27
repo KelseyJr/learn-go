@@ -12,6 +12,14 @@ services:
       # Cache de compilação: deixa o `go run` / `go test` bem mais rápido da 2ª vez em diante.
       - go-build-cache:/root/.cache/go-build
 
+  # API de tarefas (projetos/todo-api), construída com o Dockerfile de produção
+  todo-api:
+    build:
+      context: .
+      dockerfile: projetos/todo-api/Dockerfile
+    ports:
+      - "8080:8080"
+
 volumes:
   go-mod-cache:
   go-build-cache:
