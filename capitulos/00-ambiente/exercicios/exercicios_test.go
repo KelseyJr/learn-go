@@ -3,7 +3,7 @@ package exercicios
 import "testing"
 
 // Em Go, testes ficam em arquivos *_test.go e cada função de teste
-// começa com "Test" e recebe *testing.T. Veremos isso a fundo no capítulo 14.
+// começa com "Test" e recebe *testing.T. Veremos isso a fundo no capítulo 09.
 func TestSaudacao(t *testing.T) {
 	esperado := "Olá, Go!"
 

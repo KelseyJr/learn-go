@@ -2,8 +2,8 @@
 # Pense nela como o equivalente à imagem "node": traz compilador, gofmt, go test etc.
 #
 # Usamos a imagem baseada em Debian (e não Alpine) porque o race detector
-# (capítulo 17) precisa de cgo/glibc. Imagens mínimas para produção ficam
-# para o capítulo 27.
+# (capítulo 12) precisa de cgo/glibc. Imagens mínimas para produção ficam
+# para o capítulo 22.
 FROM golang:1.27
 
 WORKDIR /app

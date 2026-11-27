@@ -141,7 +141,7 @@ Faça uma alteração por vez no `main.go`, rode `make run CAP=00`, leia o erro 
 3. Troque `fmt.Println` por `fmt.println` (com `p` minúsculo).
 4. Bagunce a indentação do arquivo e rode `make fmt`. O que aconteceu?
 
-> O erro 3 é uma prévia do capítulo 11: em Go, só o que começa com letra
+> O erro 3 é uma prévia do capítulo 07: em Go, só o que começa com letra
 > **maiúscula** é exportado (público) de um pacote.
 
 ### 🏆 4. Desafio
