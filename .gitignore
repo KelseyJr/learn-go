@@ -1,0 +1,17 @@
+# Binários compilados (o "dist/" do Go)
+/bin/
+*.exe
+*.test
+
+# Relatórios de cobertura e profiling
+*.out
+coverage.*
+*.prof
+
+# Variáveis de ambiente
+.env
+
+# Editor / sistema operacional
+.DS_Store
+.idea/
+.vscode/

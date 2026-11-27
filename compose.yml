@@ -1,0 +1,17 @@
+services:
+  go:
+    build: .
+    working_dir: /app
+    volumes:
+      # O código fica na sua máquina e é "espelhado" no container:
+      # edita no editor, roda com `make`, sem rebuild.
+      - .:/app
+      # Cache das dependências baixadas (no Go não existe node_modules por projeto;
+      # tudo fica num cache global, que aqui persiste entre execuções).
+      - go-mod-cache:/go/pkg/mod
+      # Cache de compilação: deixa o `go run` / `go test` bem mais rápido da 2ª vez em diante.
+      - go-build-cache:/root/.cache/go-build
+
+volumes:
+  go-mod-cache:
+  go-build-cache:
