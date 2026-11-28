@@ -14,14 +14,14 @@ import (
 func Logger(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
-		rec := &statusRecorder{ResponseWriter: w, status: http.StatusOK}
+		recorder := &statusRecorder{ResponseWriter: w, status: http.StatusOK}
 
-		next.ServeHTTP(rec, r) // ≈ next() no Express
+		next.ServeHTTP(recorder, r) // ≈ next() no Express
 
 		slog.Info("request",
 			"method", r.Method,
 			"path", r.URL.Path,
-			"status", rec.status,
+			"status", recorder.status,
 			"duration", time.Since(start),
 		)
 	})
@@ -36,7 +36,8 @@ type statusRecorder struct {
 	status int
 }
 
-func (s *statusRecorder) WriteHeader(code int) {
-	s.status = code
-	s.ResponseWriter.WriteHeader(code)
+// WriteHeader anota o status antes de repassá-lo ao ResponseWriter original.
+func (recorder *statusRecorder) WriteHeader(code int) {
+	recorder.status = code
+	recorder.ResponseWriter.WriteHeader(code)
 }

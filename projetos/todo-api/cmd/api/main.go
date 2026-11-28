@@ -82,6 +82,7 @@ func run() error {
 	return srv.Shutdown(shutdownCtx)
 }
 
+// envOr lê uma variável de ambiente, ou devolve o fallback se ela estiver vazia.
 func envOr(key, fallback string) string {
 	if v := os.Getenv(key); v != "" {
 		return v

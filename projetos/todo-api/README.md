@@ -36,7 +36,7 @@ projetos/todo-api/
 ├── cmd/api/main.go            # ponto de entrada: monta as peças e sobe o servidor
 ├── internal/
 │   ├── task/                  # tudo sobre tarefas
-│   │   ├── task.go            # modelo, erros e validação
+│   │   ├── model.go           # modelo, erros e validação
 │   │   ├── store.go           # armazenamento em memória
 │   │   ├── handler.go         # rotas HTTP
 │   │   └── handler_test.go    # testes das rotas
@@ -51,7 +51,7 @@ projetos/todo-api/
 | `cmd/api/main.go`               | `server.js`                              |
 | `internal/task/handler.go`      | `routes/tasks.js` + controller           |
 | `internal/task/store.go`        | repository / model                       |
-| `internal/task/task.go`         | model + validação (zod/joi)              |
+| `internal/task/model.go`        | model + validação (zod/joi)              |
 | `internal/httpx/middleware.go`  | `morgan`                                 |
 | `internal/task/handler_test.go` | jest + supertest                         |
 
@@ -60,6 +60,11 @@ projetos/todo-api/
 - **`cmd/`** guarda os executáveis (um projeto pode ter `cmd/api`, `cmd/worker`...).
 - **`internal/`** é uma regra do compilador: o que está ali só pode ser importado
   por este projeto, nunca por outro módulo. É o "privado" no nível de pacote.
+
+> 💡 **Pasta = pacote, arquivo = gaveta.** `task.NewMemoryStore()` se refere à **pasta**
+> `internal/task/`, não a um arquivo. Todos os arquivos dela começam com `package task`
+> e formam um único pacote; o nome do arquivo não importa para o Go. Para saber o pacote
+> de um arquivo, olhe a primeira linha dele.
 
 ## Caminho de uma requisição
 
@@ -84,7 +89,7 @@ httpx.WriteJSON → 200 {"id": 1, "title": "...", "done": true, ...}
 
 ## Ordem de leitura sugerida
 
-1. [`task.go`](internal/task/task.go): o modelo e as regras.
+1. [`model.go`](internal/task/model.go): o modelo e as regras.
 2. [`store.go`](internal/task/store.go): onde os dados ficam.
 3. [`handler.go`](internal/task/handler.go): as rotas, o coração da API.
 4. [`httpx/`](internal/httpx): JSON e middleware.
@@ -95,10 +100,10 @@ httpx.WriteJSON → 200 {"id": 1, "title": "...", "done": true, ...}
 
 | Conceito                                | Onde                                  | Em JS/TS seria                       |
 | --------------------------------------- | ------------------------------------- | ------------------------------------ |
-| Struct tags `json:"..."`                | `task.go`                             | os nomes das props no JSON           |
-| Erros sentinela + `errors.Is`           | `task.go`, `respondError` em `handler.go` | classes de erro + `instanceof`  |
+| Struct tags `json:"..."`                | `model.go`                            | os nomes das props no JSON           |
+| Erros sentinela + `errors.Is`           | `model.go`, `respondError` em `handler.go` | classes de erro + `instanceof`  |
 | Interface implícita (`Store`)           | `handler.go`                          | interface do TS, sem `implements`    |
-| Receiver ponteiro `(h *Handler)`        | todos os métodos                      | `this`                               |
+| Receiver ponteiro `(handler *Handler)`  | todos os métodos                      | `this`                               |
 | Ponteiro como campo opcional (`*bool`)  | `updateRequest` em `handler.go`       | `done?: boolean`                     |
 | `&req` para o Decode preencher          | `create` em `handler.go`              | —                                    |
 | `r.Context()` repassado ao store        | todos os handlers                     | `AbortSignal`                        |
@@ -124,3 +129,6 @@ httpx.WriteJSON → 200 {"id": 1, "title": "...", "done": true, ...}
 - **Graceful shutdown.** Ao receber Ctrl+C ou `docker stop`, o servidor para de
   aceitar conexões e espera as requisições em andamento terminarem.
 - **Nomes em inglês, comentários em português.** Nomes em inglês são o padrão do mercado.
+- **Receivers com nome completo** (`store`, `handler`, `recorder`), para facilitar a leitura
+  enquanto se aprende. **Isso foge do costume:** em código Go profissional o receiver tem
+  uma ou duas letras, como `(s *MemoryStore)` e `(h *Handler)`.

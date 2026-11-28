@@ -19,13 +19,17 @@ import (
 //
 // Os métodos recebem context.Context para ter a mesma assinatura de um store com
 // banco de dados (que repassaria o ctx para a query). Aqui ele não é usado, por isso o `_`.
+//
+// Neste projeto os receivers têm nome completo (store, handler) para facilitar
+// a leitura. O costume em Go é usar uma ou duas letras: (s *MemoryStore).
 type MemoryStore struct {
 	mu     sync.RWMutex
 	tasks  map[int64]Task
 	nextID int64
 }
 
-// NewMemoryStore é o construtor. O map precisa do make: escrever num map nil causa panic.
+// NewMemoryStore cria um MemoryStore vazio, pronto para uso.
+// O map precisa do make: escrever num map nil causa panic.
 func NewMemoryStore() *MemoryStore {
 	return &MemoryStore{
 		tasks:  make(map[int64]Task),
@@ -33,13 +37,14 @@ func NewMemoryStore() *MemoryStore {
 	}
 }
 
-func (s *MemoryStore) List(_ context.Context) ([]Task, error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
+// List devolve todas as tarefas, ordenadas por ID.
+func (store *MemoryStore) List(_ context.Context) ([]Task, error) {
+	store.mu.RLock()
+	defer store.mu.RUnlock()
 
 	// make garante uma lista vazia ([]) em vez de nil, que viraria `null` no JSON
-	tasks := make([]Task, 0, len(s.tasks))
-	for _, t := range s.tasks {
+	tasks := make([]Task, 0, len(store.tasks))
+	for _, t := range store.tasks {
 		tasks = append(tasks, t)
 	}
 	// A ordem de um map é aleatória, então ordenamos por ID
@@ -47,49 +52,54 @@ func (s *MemoryStore) List(_ context.Context) ([]Task, error) {
 	return tasks, nil
 }
 
-func (s *MemoryStore) Get(_ context.Context, id int64) (Task, error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
+// Get devolve a tarefa com o ID informado, ou ErrNotFound se ela não existir.
+func (store *MemoryStore) Get(_ context.Context, id int64) (Task, error) {
+	store.mu.RLock()
+	defer store.mu.RUnlock()
 
-	t, ok := s.tasks[id]
+	t, ok := store.tasks[id]
 	if !ok {
 		return Task{}, ErrNotFound
 	}
 	return t, nil
 }
 
-func (s *MemoryStore) Create(_ context.Context, title string) (Task, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+// Create salva uma nova tarefa com o próximo ID disponível e a devolve.
+func (store *MemoryStore) Create(_ context.Context, title string) (Task, error) {
+	store.mu.Lock()
+	defer store.mu.Unlock()
 
 	t := Task{
-		ID:        s.nextID,
+		ID:        store.nextID,
 		Title:     title,
 		CreatedAt: time.Now().UTC(),
 	}
-	s.tasks[t.ID] = t
-	s.nextID++
+	store.tasks[t.ID] = t
+	store.nextID++
 	return t, nil
 }
 
-func (s *MemoryStore) Update(_ context.Context, t Task) (Task, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+// Update substitui a tarefa salva pela versão recebida (identificada pelo ID).
+// Devolve ErrNotFound se a tarefa não existir.
+func (store *MemoryStore) Update(_ context.Context, t Task) (Task, error) {
+	store.mu.Lock()
+	defer store.mu.Unlock()
 
-	if _, ok := s.tasks[t.ID]; !ok {
+	if _, ok := store.tasks[t.ID]; !ok {
 		return Task{}, ErrNotFound
 	}
-	s.tasks[t.ID] = t
+	store.tasks[t.ID] = t
 	return t, nil
 }
 
-func (s *MemoryStore) Delete(_ context.Context, id int64) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+// Delete remove a tarefa com o ID informado, ou devolve ErrNotFound se ela não existir.
+func (store *MemoryStore) Delete(_ context.Context, id int64) error {
+	store.mu.Lock()
+	defer store.mu.Unlock()
 
-	if _, ok := s.tasks[id]; !ok {
+	if _, ok := store.tasks[id]; !ok {
 		return ErrNotFound
 	}
-	delete(s.tasks, id)
+	delete(store.tasks, id)
 	return nil
 }
