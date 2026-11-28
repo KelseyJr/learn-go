@@ -103,7 +103,7 @@ httpx.WriteJSON → 200 {"id": 1, "title": "...", "done": true, ...}
 | Struct tags `json:"..."`                | `model.go`                            | os nomes das props no JSON           |
 | Erros sentinela + `errors.Is`           | `model.go`, `respondError` em `handler.go` | classes de erro + `instanceof`  |
 | Interface implícita (`Store`)           | `handler.go`                          | interface do TS, sem `implements`    |
-| Receiver ponteiro `(handler *Handler)`  | todos os métodos                      | `this`                               |
+| Receiver ponteiro `(h *Handler)`        | todos os métodos                      | `this`                               |
 | Ponteiro como campo opcional (`*bool`)  | `updateRequest` em `handler.go`       | `done?: boolean`                     |
 | `&req` para o Decode preencher          | `create` em `handler.go`              | —                                    |
 | `r.Context()` repassado ao store        | todos os handlers                     | `AbortSignal`                        |
@@ -129,6 +129,5 @@ httpx.WriteJSON → 200 {"id": 1, "title": "...", "done": true, ...}
 - **Graceful shutdown.** Ao receber Ctrl+C ou `docker stop`, o servidor para de
   aceitar conexões e espera as requisições em andamento terminarem.
 - **Nomes em inglês, comentários em português.** Nomes em inglês são o padrão do mercado.
-- **Receivers com nome completo** (`store`, `handler`, `recorder`), para facilitar a leitura
-  enquanto se aprende. **Isso foge do costume:** em código Go profissional o receiver tem
-  uma ou duas letras, como `(s *MemoryStore)` e `(h *Handler)`.
+- **Receivers com uma letra** (`s`, `h`), como manda a convenção do Go: o receiver
+  aparece em quase toda linha do método e o contexto já diz quem ele é (≈ o `this`).

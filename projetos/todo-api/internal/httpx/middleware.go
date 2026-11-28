@@ -37,7 +37,7 @@ type statusRecorder struct {
 }
 
 // WriteHeader anota o status antes de repassá-lo ao ResponseWriter original.
-func (recorder *statusRecorder) WriteHeader(code int) {
-	recorder.status = code
-	recorder.ResponseWriter.WriteHeader(code)
+func (s *statusRecorder) WriteHeader(code int) {
+	s.status = code
+	s.ResponseWriter.WriteHeader(code)
 }

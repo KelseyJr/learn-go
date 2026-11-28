@@ -37,19 +37,19 @@ func NewHandler(store Store) *Handler {
 // RegisterRoutes associa cada rota a um método (≈ router.get('/tasks', ...)).
 // Os métodos dos handlers começam com letra minúscula, então são privados ao
 // pacote: de fora, só RegisterRoutes é visível.
-func (handler *Handler) RegisterRoutes(mux *http.ServeMux) {
-	mux.HandleFunc("GET /tasks", handler.list)
-	mux.HandleFunc("POST /tasks", handler.create)
-	mux.HandleFunc("GET /tasks/{id}", handler.get)
-	mux.HandleFunc("PATCH /tasks/{id}", handler.update)
-	mux.HandleFunc("DELETE /tasks/{id}", handler.remove)
+func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
+	mux.HandleFunc("GET /tasks", h.list)
+	mux.HandleFunc("POST /tasks", h.create)
+	mux.HandleFunc("GET /tasks/{id}", h.get)
+	mux.HandleFunc("PATCH /tasks/{id}", h.update)
+	mux.HandleFunc("DELETE /tasks/{id}", h.remove)
 }
 
 // list responde GET /tasks com todas as tarefas.
 //
 // Todo handler HTTP tem esta assinatura: w ≈ res e r ≈ req do Express.
-func (handler *Handler) list(w http.ResponseWriter, r *http.Request) {
-	tasks, err := handler.store.List(r.Context())
+func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
+	tasks, err := h.store.List(r.Context())
 	if err != nil {
 		respondError(w, err)
 		return
@@ -58,14 +58,14 @@ func (handler *Handler) list(w http.ResponseWriter, r *http.Request) {
 }
 
 // get responde GET /tasks/{id} com uma tarefa.
-func (handler *Handler) get(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) get(w http.ResponseWriter, r *http.Request) {
 	id, err := parseID(r)
 	if err != nil {
 		httpx.WriteError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	t, err := handler.store.Get(r.Context(), id)
+	t, err := h.store.Get(r.Context(), id)
 	if err != nil {
 		respondError(w, err)
 		return
@@ -79,7 +79,7 @@ type createRequest struct {
 }
 
 // create responde POST /tasks: valida o título, cria a tarefa e devolve 201.
-func (handler *Handler) create(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 	var req createRequest
 	if err := httpx.DecodeJSON(w, r, &req); err != nil { // &req para o Decode preencher a variável
 		httpx.WriteError(w, http.StatusBadRequest, err.Error())
@@ -92,7 +92,7 @@ func (handler *Handler) create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	t, err := handler.store.Create(r.Context(), title)
+	t, err := h.store.Create(r.Context(), title)
 	if err != nil {
 		respondError(w, err)
 		return
@@ -109,7 +109,7 @@ type updateRequest struct {
 }
 
 // update responde PATCH /tasks/{id}: altera só os campos enviados no corpo.
-func (handler *Handler) update(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 	id, err := parseID(r)
 	if err != nil {
 		httpx.WriteError(w, http.StatusBadRequest, err.Error())
@@ -122,7 +122,7 @@ func (handler *Handler) update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	t, err := handler.store.Get(r.Context(), id)
+	t, err := h.store.Get(r.Context(), id)
 	if err != nil {
 		respondError(w, err)
 		return
@@ -141,7 +141,7 @@ func (handler *Handler) update(w http.ResponseWriter, r *http.Request) {
 		t.Done = *req.Done
 	}
 
-	t, err = handler.store.Update(r.Context(), t)
+	t, err = h.store.Update(r.Context(), t)
 	if err != nil {
 		respondError(w, err)
 		return
@@ -150,14 +150,14 @@ func (handler *Handler) update(w http.ResponseWriter, r *http.Request) {
 }
 
 // remove responde DELETE /tasks/{id} com 204 (sucesso, sem corpo).
-func (handler *Handler) remove(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) remove(w http.ResponseWriter, r *http.Request) {
 	id, err := parseID(r)
 	if err != nil {
 		httpx.WriteError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	if err := handler.store.Delete(r.Context(), id); err != nil {
+	if err := h.store.Delete(r.Context(), id); err != nil {
 		respondError(w, err)
 		return
 	}
