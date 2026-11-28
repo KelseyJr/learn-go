@@ -26,14 +26,14 @@ ex: check-cap ## Roda os testes dos exercícios de um capítulo (ex: make ex CAP
 test: check-cap ## Roda todos os testes de um capítulo
 	$(GO) go test -v ./$(DIR)/...
 
-test-all: ## Roda os testes do repositório inteiro
-	$(GO) go test ./...
+test-all: ## Roda os testes do repositório inteiro (capítulos + projetos)
+	$(GO) sh -c 'go test ./... && cd projetos/todo-api && go test ./...'
 
 fmt: ## Formata todo o código com gofmt
 	$(GO) gofmt -l -w .
 
-vet: ## Análise estática com go vet
-	$(GO) go vet ./...
+vet: ## Análise estática com go vet (capítulos + projetos)
+	$(GO) sh -c 'go vet ./... && cd projetos/todo-api && go vet ./...'
 
 shell: ## Abre um terminal dentro do container Go
 	$(GO) bash
@@ -45,7 +45,7 @@ todo: ## Sobe a API de tarefas em http://localhost:8080 (Ctrl+C para parar)
 	docker compose up --build todo-api
 
 todo-test: ## Roda os testes da API de tarefas
-	$(GO) go test -v ./projetos/todo-api/...
+	docker compose run --rm -w /app/projetos/todo-api go go test -v ./...
 
 check-cap:
 	@if [ -z "$(DIR)" ]; then \

@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/KelseyJr/learn-go/projetos/todo-api/internal/httpx"
+	"todo/internal/httpx"
 )
 
 // Store é tudo o que o Handler precisa da camada de dados.

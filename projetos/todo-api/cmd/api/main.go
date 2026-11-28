@@ -12,8 +12,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/KelseyJr/learn-go/projetos/todo-api/internal/httpx"
-	"github.com/KelseyJr/learn-go/projetos/todo-api/internal/task"
+	"todo/internal/httpx"
+	"todo/internal/task"
 )
 
 func main() {

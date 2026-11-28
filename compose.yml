@@ -14,9 +14,7 @@ services:
 
   # API de tarefas (projetos/todo-api), construída com o Dockerfile de produção
   todo-api:
-    build:
-      context: .
-      dockerfile: projetos/todo-api/Dockerfile
+    build: projetos/todo-api
     ports:
       - "8080:8080"
 

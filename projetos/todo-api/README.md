@@ -32,6 +32,7 @@ curl -X DELETE localhost:8080/tasks/1
 
 ```
 projetos/todo-api/
+├── go.mod                     # module todo (≈ package.json)
 ├── cmd/api/main.go            # ponto de entrada: monta as peças e sobe o servidor
 ├── internal/
 │   ├── task/                  # tudo sobre tarefas
@@ -54,6 +55,8 @@ projetos/todo-api/
 | `internal/httpx/middleware.go`  | `morgan`                                 |
 | `internal/task/handler_test.go` | jest + supertest                         |
 
+- **`go.mod`** declara o módulo `todo`, e é por isso que os imports são `todo/internal/task`.
+  O projeto é autocontido: copiado para outro lugar, funciona sozinho.
 - **`cmd/`** guarda os executáveis (um projeto pode ter `cmd/api`, `cmd/worker`...).
 - **`internal/`** é uma regra do compilador: o que está ali só pode ser importado
   por este projeto, nunca por outro módulo. É o "privado" no nível de pacote.
