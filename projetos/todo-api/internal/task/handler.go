@@ -16,11 +16,15 @@ import (
 // Em Go não existe "implements": qualquer tipo que tenha esses métodos já
 // satisfaz a interface. O MemoryStore satisfaz hoje; um PostgresStore com os
 // mesmos métodos satisfaria amanhã, sem mudar uma linha deste arquivo.
+//
+// Dois nomes continuam curtos de propósito, porque o nome longo daria conflito:
+//   - ctx: chamá-lo de `context` esconderia o pacote context dentro da função
+//   - err: chamá-lo de `error` esconderia o tipo embutido error
 type Store interface {
 	List(ctx context.Context) ([]Task, error)
 	Get(ctx context.Context, id int64) (Task, error)
 	Create(ctx context.Context, title string) (Task, error)
-	Update(ctx context.Context, t Task) (Task, error)
+	Update(ctx context.Context, task Task) (Task, error)
 	Delete(ctx context.Context, id int64) error
 }
 
@@ -37,40 +41,40 @@ func NewHandler(store Store) *Handler {
 // RegisterRoutes associa cada rota a um método (≈ router.get('/tasks', ...)).
 // Os métodos dos handlers começam com letra minúscula, então são privados ao
 // pacote: de fora, só RegisterRoutes é visível.
-func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
-	mux.HandleFunc("GET /tasks", h.list)
-	mux.HandleFunc("POST /tasks", h.create)
-	mux.HandleFunc("GET /tasks/{id}", h.get)
-	mux.HandleFunc("PATCH /tasks/{id}", h.update)
-	mux.HandleFunc("DELETE /tasks/{id}", h.remove)
+func (handler *Handler) RegisterRoutes(router *http.ServeMux) {
+	router.HandleFunc("GET /tasks", handler.list)
+	router.HandleFunc("POST /tasks", handler.create)
+	router.HandleFunc("GET /tasks/{id}", handler.get)
+	router.HandleFunc("PATCH /tasks/{id}", handler.update)
+	router.HandleFunc("DELETE /tasks/{id}", handler.remove)
 }
 
 // list responde GET /tasks com todas as tarefas.
 //
-// Todo handler HTTP tem esta assinatura: w ≈ res e r ≈ req do Express.
-func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
-	tasks, err := h.store.List(r.Context())
+// Todo handler HTTP tem esta assinatura: response ≈ res e request ≈ req do Express.
+func (handler *Handler) list(response http.ResponseWriter, request *http.Request) {
+	tasks, err := handler.store.List(request.Context())
 	if err != nil {
-		respondError(w, err)
+		respondError(response, err)
 		return
 	}
-	httpx.WriteJSON(w, http.StatusOK, tasks)
+	httpx.WriteJSON(response, http.StatusOK, tasks)
 }
 
 // get responde GET /tasks/{id} com uma tarefa.
-func (h *Handler) get(w http.ResponseWriter, r *http.Request) {
-	id, err := parseID(r)
+func (handler *Handler) get(response http.ResponseWriter, request *http.Request) {
+	id, err := parseID(request)
 	if err != nil {
-		httpx.WriteError(w, http.StatusBadRequest, err.Error())
+		httpx.WriteError(response, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	t, err := h.store.Get(r.Context(), id)
+	task, err := handler.store.Get(request.Context(), id)
 	if err != nil {
-		respondError(w, err)
+		respondError(response, err)
 		return
 	}
-	httpx.WriteJSON(w, http.StatusOK, t)
+	httpx.WriteJSON(response, http.StatusOK, task)
 }
 
 // createRequest é o corpo esperado no POST (≈ um DTO).
@@ -79,25 +83,25 @@ type createRequest struct {
 }
 
 // create responde POST /tasks: valida o título, cria a tarefa e devolve 201.
-func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
-	var req createRequest
-	if err := httpx.DecodeJSON(w, r, &req); err != nil { // &req para o Decode preencher a variável
-		httpx.WriteError(w, http.StatusBadRequest, err.Error())
+func (handler *Handler) create(response http.ResponseWriter, request *http.Request) {
+	var body createRequest
+	if err := httpx.DecodeJSON(response, request, &body); err != nil { // &body para o Decode preencher a variável
+		httpx.WriteError(response, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	title := strings.TrimSpace(req.Title)
+	title := strings.TrimSpace(body.Title)
 	if err := ValidateTitle(title); err != nil {
-		httpx.WriteError(w, http.StatusBadRequest, err.Error())
+		httpx.WriteError(response, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	t, err := h.store.Create(r.Context(), title)
+	task, err := handler.store.Create(request.Context(), title)
 	if err != nil {
-		respondError(w, err)
+		respondError(response, err)
 		return
 	}
-	httpx.WriteJSON(w, http.StatusCreated, t)
+	httpx.WriteJSON(response, http.StatusCreated, task)
 }
 
 // updateRequest usa ponteiros para tornar os campos opcionais (≈ title?: string no TS):
@@ -109,64 +113,64 @@ type updateRequest struct {
 }
 
 // update responde PATCH /tasks/{id}: altera só os campos enviados no corpo.
-func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
-	id, err := parseID(r)
+func (handler *Handler) update(response http.ResponseWriter, request *http.Request) {
+	id, err := parseID(request)
 	if err != nil {
-		httpx.WriteError(w, http.StatusBadRequest, err.Error())
+		httpx.WriteError(response, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	var req updateRequest
-	if err := httpx.DecodeJSON(w, r, &req); err != nil {
-		httpx.WriteError(w, http.StatusBadRequest, err.Error())
+	var body updateRequest
+	if err := httpx.DecodeJSON(response, request, &body); err != nil {
+		httpx.WriteError(response, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	t, err := h.store.Get(r.Context(), id)
+	task, err := handler.store.Get(request.Context(), id)
 	if err != nil {
-		respondError(w, err)
+		respondError(response, err)
 		return
 	}
 
-	// Aplica só os campos enviados. *req.Title lê o valor para onde o ponteiro aponta.
-	if req.Title != nil {
-		title := strings.TrimSpace(*req.Title)
+	// Aplica só os campos enviados. *body.Title lê o valor para onde o ponteiro aponta.
+	if body.Title != nil {
+		title := strings.TrimSpace(*body.Title)
 		if err := ValidateTitle(title); err != nil {
-			httpx.WriteError(w, http.StatusBadRequest, err.Error())
+			httpx.WriteError(response, http.StatusBadRequest, err.Error())
 			return
 		}
-		t.Title = title
+		task.Title = title
 	}
-	if req.Done != nil {
-		t.Done = *req.Done
+	if body.Done != nil {
+		task.Done = *body.Done
 	}
 
-	t, err = h.store.Update(r.Context(), t)
+	task, err = handler.store.Update(request.Context(), task)
 	if err != nil {
-		respondError(w, err)
+		respondError(response, err)
 		return
 	}
-	httpx.WriteJSON(w, http.StatusOK, t)
+	httpx.WriteJSON(response, http.StatusOK, task)
 }
 
 // remove responde DELETE /tasks/{id} com 204 (sucesso, sem corpo).
-func (h *Handler) remove(w http.ResponseWriter, r *http.Request) {
-	id, err := parseID(r)
+func (handler *Handler) remove(response http.ResponseWriter, request *http.Request) {
+	id, err := parseID(request)
 	if err != nil {
-		httpx.WriteError(w, http.StatusBadRequest, err.Error())
+		httpx.WriteError(response, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	if err := h.store.Delete(r.Context(), id); err != nil {
-		respondError(w, err)
+	if err := handler.store.Delete(request.Context(), id); err != nil {
+		respondError(response, err)
 		return
 	}
-	w.WriteHeader(http.StatusNoContent)
+	response.WriteHeader(http.StatusNoContent)
 }
 
 // parseID lê o {id} da URL (≈ req.params.id) e converte para número.
-func parseID(r *http.Request) (int64, error) {
-	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+func parseID(request *http.Request) (int64, error) {
+	id, err := strconv.ParseInt(request.PathValue("id"), 10, 64)
 	if err != nil || id < 1 {
 		return 0, errors.New("id inválido")
 	}
@@ -174,13 +178,13 @@ func parseID(r *http.Request) (int64, error) {
 }
 
 // respondError traduz erros da camada de dados em status HTTP.
-func respondError(w http.ResponseWriter, err error) {
+func respondError(response http.ResponseWriter, err error) {
 	switch {
 	case errors.Is(err, ErrNotFound):
-		httpx.WriteError(w, http.StatusNotFound, err.Error())
+		httpx.WriteError(response, http.StatusNotFound, err.Error())
 	default:
 		// Erro inesperado: registra o detalhe no log e devolve uma mensagem genérica
 		slog.Error("erro inesperado", "err", err)
-		httpx.WriteError(w, http.StatusInternalServerError, "erro interno")
+		httpx.WriteError(response, http.StatusInternalServerError, "erro interno")
 	}
 }

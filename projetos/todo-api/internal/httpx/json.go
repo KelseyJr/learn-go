@@ -8,31 +8,31 @@ import (
 	"net/http"
 )
 
-// WriteJSON escreve `v` como JSON com o status informado (≈ res.status(s).json(v)).
+// WriteJSON escreve `value` como JSON com o status informado (≈ res.status(s).json(value)).
 //
 // `any` aceita qualquer tipo (≈ unknown do TS).
-func WriteJSON(w http.ResponseWriter, status int, v any) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	if err := json.NewEncoder(w).Encode(v); err != nil {
+func WriteJSON(response http.ResponseWriter, status int, value any) {
+	response.Header().Set("Content-Type", "application/json")
+	response.WriteHeader(status)
+	if err := json.NewEncoder(response).Encode(value); err != nil {
 		slog.Error("falha ao escrever JSON", "err", err)
 	}
 }
 
 // WriteError responde no formato {"error": "mensagem"}.
-func WriteError(w http.ResponseWriter, status int, msg string) {
-	WriteJSON(w, status, map[string]string{"error": msg})
+func WriteError(response http.ResponseWriter, status int, message string) {
+	WriteJSON(response, status, map[string]string{"error": message})
 }
 
-// DecodeJSON lê o corpo da requisição para dentro de `dst` (≈ JSON.parse(req.body)).
-// `dst` precisa ser um ponteiro, para o Decode conseguir preencher a variável de quem chamou.
-func DecodeJSON(w http.ResponseWriter, r *http.Request, dst any) error {
-	r.Body = http.MaxBytesReader(w, r.Body, 1<<20) // limita o corpo a 1 MB
+// DecodeJSON lê o corpo da requisição para dentro de `destination` (≈ JSON.parse(req.body)).
+// `destination` precisa ser um ponteiro, para o Decode conseguir preencher a variável de quem chamou.
+func DecodeJSON(response http.ResponseWriter, request *http.Request, destination any) error {
+	request.Body = http.MaxBytesReader(response, request.Body, 1<<20) // limita o corpo a 1 MB
 
-	dec := json.NewDecoder(r.Body)
-	dec.DisallowUnknownFields() // rejeita campos que não existem na struct
+	decoder := json.NewDecoder(request.Body)
+	decoder.DisallowUnknownFields() // rejeita campos que não existem na struct
 
-	if err := dec.Decode(dst); err != nil {
+	if err := decoder.Decode(destination); err != nil {
 		return fmt.Errorf("JSON inválido: %w", err)
 	}
 	return nil

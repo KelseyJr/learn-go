@@ -8,92 +8,96 @@ import (
 	"testing"
 )
 
+// Toda função de teste começa com "Test" e recebe *testing.T, que controla o
+// teste (marcar falha, criar subtestes...). O costume em Go é chamá-lo de `t`;
+// aqui ele se chama `test` para facilitar a leitura.
+
 // newServer monta as rotas com um store novo, isolado para cada teste.
 func newServer() http.Handler {
-	mux := http.NewServeMux()
-	NewHandler(NewMemoryStore()).RegisterRoutes(mux)
-	return mux
+	router := http.NewServeMux()
+	NewHandler(NewMemoryStore()).RegisterRoutes(router)
+	return router
 }
 
-// do executa uma requisição direto no roteador, sem abrir porta de rede (≈ supertest).
-func do(t *testing.T, srv http.Handler, method, path, body string) *httptest.ResponseRecorder {
-	t.Helper()
-	req := httptest.NewRequest(method, path, strings.NewReader(body))
-	rec := httptest.NewRecorder()
-	srv.ServeHTTP(rec, req)
-	return rec
+// send executa uma requisição direto no roteador, sem abrir porta de rede (≈ supertest).
+func send(test *testing.T, server http.Handler, method, path, body string) *httptest.ResponseRecorder {
+	test.Helper()
+	request := httptest.NewRequest(method, path, strings.NewReader(body))
+	response := httptest.NewRecorder()
+	server.ServeHTTP(response, request)
+	return response
 }
 
 // decode é uma função genérica (≈ function decode<T>() do TS): decode[Task](...) devolve uma Task.
-func decode[T any](t *testing.T, rec *httptest.ResponseRecorder) T {
-	t.Helper()
-	var v T
-	if err := json.Unmarshal(rec.Body.Bytes(), &v); err != nil {
-		t.Fatalf("resposta não é JSON válido: %v (corpo: %s)", err, rec.Body.String())
+func decode[T any](test *testing.T, response *httptest.ResponseRecorder) T {
+	test.Helper()
+	var value T
+	if err := json.Unmarshal(response.Body.Bytes(), &value); err != nil {
+		test.Fatalf("resposta não é JSON válido: %v (corpo: %s)", err, response.Body.String())
 	}
-	return v
+	return value
 }
 
-func TestCreateAndGet(t *testing.T) {
-	srv := newServer()
+func TestCreateAndGet(test *testing.T) {
+	server := newServer()
 
-	rec := do(t, srv, "POST", "/tasks", `{"title": "  Estudar Go  "}`)
-	if rec.Code != http.StatusCreated {
-		t.Fatalf("POST /tasks: status %d, esperado 201 (corpo: %s)", rec.Code, rec.Body.String())
+	response := send(test, server, "POST", "/tasks", `{"title": "  Estudar Go  "}`)
+	if response.Code != http.StatusCreated {
+		test.Fatalf("POST /tasks: status %d, esperado 201 (corpo: %s)", response.Code, response.Body.String())
 	}
-	created := decode[Task](t, rec)
+	created := decode[Task](test, response)
 	if created.ID != 1 || created.Title != "Estudar Go" || created.Done {
-		t.Fatalf("tarefa criada inesperada: %+v", created)
+		test.Fatalf("tarefa criada inesperada: %+v", created)
 	}
 
-	rec = do(t, srv, "GET", "/tasks/1", "")
-	if rec.Code != http.StatusOK {
-		t.Fatalf("GET /tasks/1: status %d, esperado 200", rec.Code)
+	response = send(test, server, "GET", "/tasks/1", "")
+	if response.Code != http.StatusOK {
+		test.Fatalf("GET /tasks/1: status %d, esperado 200", response.Code)
 	}
-	if got := decode[Task](t, rec); got.Title != "Estudar Go" {
-		t.Errorf("GET /tasks/1: título %q, esperado %q", got.Title, "Estudar Go")
-	}
-}
-
-func TestListStartsAsEmptyArray(t *testing.T) {
-	rec := do(t, newServer(), "GET", "/tasks", "")
-
-	if body := strings.TrimSpace(rec.Body.String()); body != "[]" {
-		t.Errorf("GET /tasks sem tarefas: corpo %s, esperado []", body)
+	if found := decode[Task](test, response); found.Title != "Estudar Go" {
+		test.Errorf("GET /tasks/1: título %q, esperado %q", found.Title, "Estudar Go")
 	}
 }
 
-func TestPatchUpdatesOnlySentFields(t *testing.T) {
-	srv := newServer()
-	do(t, srv, "POST", "/tasks", `{"title": "Estudar Go"}`)
+func TestListStartsAsEmptyArray(test *testing.T) {
+	response := send(test, newServer(), "GET", "/tasks", "")
 
-	rec := do(t, srv, "PATCH", "/tasks/1", `{"done": true}`)
-	if rec.Code != http.StatusOK {
-		t.Fatalf("PATCH /tasks/1: status %d, esperado 200 (corpo: %s)", rec.Code, rec.Body.String())
-	}
-	got := decode[Task](t, rec)
-	if !got.Done || got.Title != "Estudar Go" {
-		t.Errorf("PATCH só com done deveria manter o título: %+v", got)
+	if body := strings.TrimSpace(response.Body.String()); body != "[]" {
+		test.Errorf("GET /tasks sem tarefas: corpo %s, esperado []", body)
 	}
 }
 
-func TestDelete(t *testing.T) {
-	srv := newServer()
-	do(t, srv, "POST", "/tasks", `{"title": "Apagar"}`)
+func TestPatchUpdatesOnlySentFields(test *testing.T) {
+	server := newServer()
+	send(test, server, "POST", "/tasks", `{"title": "Estudar Go"}`)
 
-	if rec := do(t, srv, "DELETE", "/tasks/1", ""); rec.Code != http.StatusNoContent {
-		t.Fatalf("DELETE /tasks/1: status %d, esperado 204", rec.Code)
+	response := send(test, server, "PATCH", "/tasks/1", `{"done": true}`)
+	if response.Code != http.StatusOK {
+		test.Fatalf("PATCH /tasks/1: status %d, esperado 200 (corpo: %s)", response.Code, response.Body.String())
 	}
-	if rec := do(t, srv, "GET", "/tasks/1", ""); rec.Code != http.StatusNotFound {
-		t.Errorf("GET depois do DELETE: status %d, esperado 404", rec.Code)
+	updated := decode[Task](test, response)
+	if !updated.Done || updated.Title != "Estudar Go" {
+		test.Errorf("PATCH só com done deveria manter o título: %+v", updated)
+	}
+}
+
+func TestDelete(test *testing.T) {
+	server := newServer()
+	send(test, server, "POST", "/tasks", `{"title": "Apagar"}`)
+
+	if response := send(test, server, "DELETE", "/tasks/1", ""); response.Code != http.StatusNoContent {
+		test.Fatalf("DELETE /tasks/1: status %d, esperado 204", response.Code)
+	}
+	if response := send(test, server, "GET", "/tasks/1", ""); response.Code != http.StatusNotFound {
+		test.Errorf("GET depois do DELETE: status %d, esperado 404", response.Code)
 	}
 }
 
 // Teste "table-driven": uma tabela de casos e um loop. É o estilo mais comum em Go.
-func TestErrors(t *testing.T) {
+func TestErrors(test *testing.T) {
 	tooLong := `{"title": "` + strings.Repeat("a", 201) + `"}`
 
-	cases := []struct {
+	testCases := []struct {
 		name         string
 		method, path string
 		body         string
@@ -111,12 +115,12 @@ func TestErrors(t *testing.T) {
 		{"método não permitido", "PUT", "/tasks/1", "", http.StatusMethodNotAllowed},
 	}
 
-	for _, c := range cases {
-		t.Run(c.name, func(t *testing.T) {
-			rec := do(t, newServer(), c.method, c.path, c.body)
-			if rec.Code != c.wantStatus {
-				t.Errorf("%s %s: status %d, esperado %d (corpo: %s)",
-					c.method, c.path, rec.Code, c.wantStatus, rec.Body.String())
+	for _, testCase := range testCases {
+		test.Run(testCase.name, func(test *testing.T) {
+			response := send(test, newServer(), testCase.method, testCase.path, testCase.body)
+			if response.Code != testCase.wantStatus {
+				test.Errorf("%s %s: status %d, esperado %d (corpo: %s)",
+					testCase.method, testCase.path, response.Code, testCase.wantStatus, response.Body.String())
 			}
 		})
 	}

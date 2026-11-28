@@ -12,15 +12,15 @@ import (
 // Middleware em Go é só uma função que recebe um http.Handler e devolve outro,
 // que "embrulha" o primeiro: faz algo antes, chama o próximo, faz algo depois.
 func Logger(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	return http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
 		start := time.Now()
-		recorder := &statusRecorder{ResponseWriter: w, status: http.StatusOK}
+		recorder := &statusRecorder{ResponseWriter: response, status: http.StatusOK}
 
-		next.ServeHTTP(recorder, r) // ≈ next() no Express
+		next.ServeHTTP(recorder, request) // ≈ next() no Express
 
 		slog.Info("request",
-			"method", r.Method,
-			"path", r.URL.Path,
+			"method", request.Method,
+			"path", request.URL.Path,
 			"status", recorder.status,
 			"duration", time.Since(start),
 		)
@@ -37,7 +37,7 @@ type statusRecorder struct {
 }
 
 // WriteHeader anota o status antes de repassá-lo ao ResponseWriter original.
-func (s *statusRecorder) WriteHeader(code int) {
-	s.status = code
-	s.ResponseWriter.WriteHeader(code)
+func (recorder *statusRecorder) WriteHeader(statusCode int) {
+	recorder.status = statusCode
+	recorder.ResponseWriter.WriteHeader(statusCode)
 }

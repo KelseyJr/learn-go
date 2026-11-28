@@ -29,21 +29,21 @@ func main() {
 // run concentra a inicialização e devolve error em vez de derrubar o processo
 // em vários pontos. É um padrão comum no main de projetos Go.
 func run() error {
-	addr := ":" + envOr("PORT", "8080") // ≈ process.env.PORT ?? "8080"
+	address := ":" + envOr("PORT", "8080") // ≈ process.env.PORT ?? "8080"
 
 	// Injeção de dependência manual, sem framework: cria as peças e passa adiante
 	store := task.NewMemoryStore()
 	handler := task.NewHandler(store)
 
-	mux := http.NewServeMux() // o roteador da biblioteca padrão (≈ express.Router())
-	mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
-		httpx.WriteJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+	router := http.NewServeMux() // o roteador da biblioteca padrão (≈ express.Router())
+	router.HandleFunc("GET /health", func(response http.ResponseWriter, request *http.Request) {
+		httpx.WriteJSON(response, http.StatusOK, map[string]string{"status": "ok"})
 	})
-	handler.RegisterRoutes(mux)
+	handler.RegisterRoutes(router)
 
-	srv := &http.Server{
-		Addr:              addr,
-		Handler:           httpx.Logger(mux), // todas as rotas passam pelo middleware
+	server := &http.Server{
+		Addr:              address,
+		Handler:           httpx.Logger(router), // todas as rotas passam pelo middleware
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       10 * time.Second,
 		WriteTimeout:      10 * time.Second,
@@ -61,8 +61,8 @@ func run() error {
 	// ListenAndServe bloqueia, por isso roda numa goroutine (em "segundo plano")
 	serverErr := make(chan error, 1)
 	go func() {
-		slog.Info("servidor iniciado", "addr", addr)
-		serverErr <- srv.ListenAndServe()
+		slog.Info("servidor iniciado", "address", address)
+		serverErr <- server.ListenAndServe()
 	}()
 
 	// Espera o que acontecer primeiro: o servidor falhar ou chegar um sinal de parada
@@ -79,13 +79,13 @@ func run() error {
 	slog.Info("encerrando servidor...")
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	return srv.Shutdown(shutdownCtx)
+	return server.Shutdown(shutdownCtx)
 }
 
 // envOr lê uma variável de ambiente, ou devolve o fallback se ela estiver vazia.
 func envOr(key, fallback string) string {
-	if v := os.Getenv(key); v != "" {
-		return v
+	if value := os.Getenv(key); value != "" {
+		return value
 	}
 	return fallback
 }

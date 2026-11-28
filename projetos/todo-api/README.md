@@ -103,10 +103,10 @@ httpx.WriteJSON → 200 {"id": 1, "title": "...", "done": true, ...}
 | Struct tags `json:"..."`                | `model.go`                            | os nomes das props no JSON           |
 | Erros sentinela + `errors.Is`           | `model.go`, `respondError` em `handler.go` | classes de erro + `instanceof`  |
 | Interface implícita (`Store`)           | `handler.go`                          | interface do TS, sem `implements`    |
-| Receiver ponteiro `(h *Handler)`        | todos os métodos                      | `this`                               |
+| Receiver ponteiro `(handler *Handler)`  | todos os métodos                      | `this`                               |
 | Ponteiro como campo opcional (`*bool`)  | `updateRequest` em `handler.go`       | `done?: boolean`                     |
-| `&req` para o Decode preencher          | `create` em `handler.go`              | —                                    |
-| `r.Context()` repassado ao store        | todos os handlers                     | `AbortSignal`                        |
+| `&body` para o Decode preencher         | `create` em `handler.go`              | —                                    |
+| `request.Context()` repassado ao store  | todos os handlers                     | `AbortSignal`                        |
 | Mutex                                   | `store.go`                            | não existe (event loop single-thread) |
 | Middleware                              | `middleware.go`                       | `app.use(morgan(...))`               |
 | Embedding (`statusRecorder`)            | `middleware.go`                       | um `extends` que sobrescreve um método |
@@ -129,5 +129,8 @@ httpx.WriteJSON → 200 {"id": 1, "title": "...", "done": true, ...}
 - **Graceful shutdown.** Ao receber Ctrl+C ou `docker stop`, o servidor para de
   aceitar conexões e espera as requisições em andamento terminarem.
 - **Nomes em inglês, comentários em português.** Nomes em inglês são o padrão do mercado.
-- **Receivers com uma letra** (`s`, `h`), como manda a convenção do Go: o receiver
-  aparece em quase toda linha do método e o contexto já diz quem ele é (≈ o `this`).
+- **Nomes por extenso** em receivers, parâmetros e variáveis (`store`, `handler`, `task`,
+  `response`, `request`), para facilitar a leitura enquanto se aprende. **Isso foge do
+  costume:** em código Go profissional, nomes de escopo curto costumam ter uma ou duas letras,
+  como `(s *MemoryStore)`, `t`, `w http.ResponseWriter` e `r *http.Request`.
+  Ficaram curtos só `ctx` e `err`: `context` esconderia o pacote context e `error`, o tipo embutido.
